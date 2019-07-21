@@ -158,6 +158,7 @@ namespace Kontrol20._07
                     }
                 }
             }
+            Console.ReadLine();
         }
     }
 }
