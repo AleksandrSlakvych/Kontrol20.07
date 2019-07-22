@@ -13,7 +13,7 @@ namespace Kontrol20._07
         public TeamContext()
           : base("teamplayerconnection")
         {
-            Database.Log += (str) => Console.WriteLine(str);
+            //Database.Log += (str) => Console.WriteLine(str);
             Database.SetInitializer(new PlayerDbInitializer());
         }
 
@@ -27,10 +27,9 @@ namespace Kontrol20._07
     {
         [Key]
         public int Id { get; set; }
-        //public Match MatchWithGoal { get; set; }
         public int GoalTime { get; set; }
-        public Team GoalTeam { get; set; }
-        public Player GoalPlayer { get; set; }
+        public virtual Team GoalTeam { get; set; }
+        public virtual Player GoalPlayer { get; set; }
     }
 
     public class Match
@@ -39,10 +38,10 @@ namespace Kontrol20._07
         public int Id { get; set; }
         public int TeamARresult { get; set; }
         public int TeamBRresult { get; set; }
-        public Team TeamA { get; set; }
-        public Team TeamB { get; set; }
+        public virtual Team TeamA { get; set; }
+        public virtual Team TeamB { get; set; }
         public DateTime Time { get; set; }
-        public List<Goal> GoalsInMatch { get; set; }
+        public virtual List<Goal> GoalsInMatch { get; set; }
     }
 
     public class Team
@@ -50,7 +49,7 @@ namespace Kontrol20._07
         [Key]
         public int Id { get; set; }
         public string Name { get; set; }
-        public List<Player> TeamPlayers { get; set; }
+        public virtual List<Player> TeamPlayers { get; set; }
     }
 
     public class Player
@@ -60,7 +59,7 @@ namespace Kontrol20._07
         public string FirstName { get; set; }
         public string SureName { get; set; }
         public string TeamID { get; set; }
-        public Team Team { get; set; }
+        public virtual Team Team { get; set; }
 
     }
 
@@ -102,8 +101,6 @@ namespace Kontrol20._07
             var match3 = context.Matches.Add(new Match() { TeamA = team5, TeamARresult = 3, TeamB = team6, TeamBRresult = 2, Time = DateTime.Now, GoalsInMatch = new List<Goal> { goals4, goals5, goals6, goals7, goals8 } });
             var match4 = context.Matches.Add(new Match() { TeamA = team1, TeamARresult = 0, TeamB = team6, TeamBRresult = 0, Time = DateTime.Now, GoalsInMatch = null } );
 
-           
-
             context.SaveChanges();
             base.Seed(context);
         }
@@ -115,48 +112,71 @@ namespace Kontrol20._07
         {
             using (var context = new TeamContext())
             {
-                var allgoals = context.Goals.ToList();
-                var allplayers = context.Players.ToList();
-                var allteams = context.Teams.ToList();
-                var allmatches = context.Matches.ToList();
+                var matches = context.Matches.Include(p => p.TeamA).Include(p => p.TeamB).ToList();
+                var goals = context.Goals.Include(p => p.GoalTeam).Include(p => p.GoalPlayer).ToList();
+                
 
-                foreach (var match in allmatches)
+                foreach (var match in matches)
                 {
                     Console.WriteLine($"{match.TeamA.Name}-{match.TeamB.Name} with " +
                         $"{match.TeamARresult}:{match.TeamBRresult} in {match.Time}");
 
-                    if (match.GoalsInMatch == null)
-                    {
-                        Console.WriteLine("");
-                    }
-                    else
-                    {
-                        var goals = match.GoalsInMatch.OrderBy(u => u.GoalTime);
-                        foreach (var goal in goals)
-                        {
-                            if (goal == null)
-                                Console.WriteLine("");
+                    var players = context.Players.Include(p => p.Team). ToList();
+                    var plaers = match.TeamA.TeamPlayers.Select(x => x).ToList();
 
-                            Console.WriteLine($"                 {goal.GoalTeam.Name}-{goal.GoalTime}' {goal.GoalPlayer.FirstName} {goal.GoalPlayer.SureName}");
-                        }
-                    }
-                    
-                    
-                    var playersA = match.TeamA.TeamPlayers.ToList();
-                    var playersB = match.TeamB.TeamPlayers.ToList();
+                    var allPL = context.Players.Join(context.Teams, o => o.Id, i => i.Id, (p, i) => new { i.Name, p.FirstName, p.SureName }).ToList();
 
-                    Console.WriteLine($"{match.TeamA.Name} players in this match:");
-                    foreach (var player in playersA)
+                    foreach (var all in allPL)
                     {
-                        Console.WriteLine($"                     {player.FirstName} {player.SureName}");
+                        Console.WriteLine($"{all.FirstName} {all.SureName}");
                     }
+                    //Console.WriteLine($"{match.TeamA.Name} players in this match:");
+                    //Console.WriteLine($"{match.TeamA.TeamPlayers.Select(x => x).ToString()}");
 
-                    Console.WriteLine($"{match.TeamB.Name} players in this match:");
-                    foreach (var player in playersB)
-                    {
-                        Console.WriteLine($"                     {player.FirstName} {player.SureName}");
-                    }
                 }
+
+
+
+                //var matches = context.Matches.Where(x => x.TeamARresult > x.TeamBRresult).ToList();
+                //var matches1 = context.Matches.Select(x => x).ToList();
+
+                //foreach (var match in matches1)
+                //{
+                //    Console.WriteLine($"{match.TeamA.Name}-{match.TeamB.Name} with " +
+                //        $"{match.TeamARresult}:{match.TeamBRresult} in {match.Time}");
+
+                //    if (match.GoalsInMatch == null)
+                //    {
+                //        Console.WriteLine("");
+                //    }
+                //    else
+                //    {
+                //        var goals1 = match.GoalsInMatch.Where(x => x.GoalTime > 0).OrderBy(u => u.GoalTime);
+                //        foreach (var goal in goals1)
+                //        {
+                //            if (goal == null)
+                //                Console.WriteLine("");
+
+                //            Console.WriteLine($"                 {goal.GoalTeam.Name}-{goal.GoalTime}' {goal.GoalPlayer.FirstName} {goal.GoalPlayer.SureName}");
+                //        }
+                //    }
+
+                //    var playersA1 = match.TeamA.TeamPlayers.Select(x => x).ToList();
+                //    var playersB1 = match.TeamB.TeamPlayers.Select(x => x).ToList();
+
+                //    Console.WriteLine($"{match.TeamA.Name} players in this match:");
+
+                //    foreach (var player in playersA1)
+                //    {
+                //        Console.WriteLine($"                     {player.FirstName} {player.SureName}");
+                //    }
+
+                //    Console.WriteLine($"{match.TeamB.Name} players in this match:");
+                //    foreach (var player in playersB1)
+                //    {
+                //        Console.WriteLine($"                     {player.FirstName} {player.SureName}");
+                //    }
+                //}
             }
             Console.ReadLine();
         }
